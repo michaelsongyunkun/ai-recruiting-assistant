@@ -64,6 +64,8 @@ npm run build
 
 This repository includes a `render.yaml` Blueprint for a Render Web Service.
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/michaelsongyunkun/ai-recruiting-assistant)
+
 1. Open the Render Dashboard and create a new Blueprint.
 2. Connect this GitHub repository:
 
