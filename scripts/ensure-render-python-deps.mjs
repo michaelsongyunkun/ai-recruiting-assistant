@@ -1,11 +1,25 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
+import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
 const shouldInstall = process.env.RENDER === "true" || process.argv.includes("--force");
+const strict = process.argv.includes("--strict");
+const requirementsPath = join(process.cwd(), "requirements.txt");
+const targetPath = join(process.cwd(), ".python-packages");
 
 if (!shouldInstall) {
   console.log("Skipping Python document extraction dependencies outside Render.");
+  process.exit(0);
+}
+
+function finishWithWarning(message, result = null) {
+  console.warn(message);
+  if (result?.error) console.warn(result.error);
+  if (strict) {
+    process.exit(1);
+  }
+  console.warn("Continuing build; PDF resume parsing will report a runtime dependency error if pypdf is unavailable.");
   process.exit(0);
 }
 
@@ -38,11 +52,11 @@ function run(command, args) {
   });
 }
 
-const requirementsPath = join(process.cwd(), "requirements.txt");
 if (!existsSync(requirementsPath)) {
-  console.error("requirements.txt is missing; PDF resume extraction dependencies cannot be installed.");
-  process.exit(1);
+  finishWithWarning("requirements.txt is missing; PDF resume extraction dependencies cannot be installed.");
 }
+
+await mkdir(targetPath, { recursive: true });
 
 let lastResult = null;
 for (const candidate of pythonCandidates()) {
@@ -58,17 +72,18 @@ for (const candidate of pythonCandidates()) {
     "pip",
     "install",
     "--disable-pip-version-check",
+    "--no-cache-dir",
+    "--target",
+    targetPath,
     "-r",
     requirementsPath
   ]);
 
   if (installResult.ok) {
-    console.log("Python document extraction dependencies installed.");
+    console.log(`Python document extraction dependencies installed into ${targetPath}.`);
     process.exit(0);
   }
   lastResult = installResult;
 }
 
-console.error("Unable to install Python document extraction dependencies for Render.");
-if (lastResult?.error) console.error(lastResult.error);
-process.exit(1);
+finishWithWarning("Unable to install Python document extraction dependencies for Render.", lastResult);

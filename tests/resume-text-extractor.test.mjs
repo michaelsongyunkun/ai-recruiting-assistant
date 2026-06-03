@@ -31,11 +31,18 @@ assert.equal(fakePdfResult.ok, false);
 assert.notEqual(fakePdfResult.text, "%PDF-1.7\n1 0 obj\n<</Type/Catalog>>\nendobj");
 
 const extractorSource = await readFile("lib/documents/resume-text-extractor.js", "utf8");
+const ensureScript = await readFile("scripts/ensure-render-python-deps.mjs", "utf8");
 const packageJson = JSON.parse(await readFile("package.json", "utf8"));
 const requirements = await readFile("requirements.txt", "utf8");
+const gitignore = await readFile(".gitignore", "utf8");
 
 assert.match(extractorSource, /PDF_TEXT_EXTRACTOR_DEPENDENCY_MISSING/);
+assert.match(extractorSource, /PYTHONPATH/);
+assert.match(ensureScript, /--target/);
+assert.match(ensureScript, /\.python-packages/);
+assert.match(ensureScript, /Continuing build/);
 assert.match(packageJson.scripts.build, /ensure-render-python-deps\.mjs/);
 assert.match(requirements, /pypdf/);
+assert.match(gitignore, /\.python-packages/);
 
 console.log("resume-text-extractor.test.mjs passed");
