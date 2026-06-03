@@ -1,0 +1,11 @@
+node_modules
+.next
+storage
+.env
+.env.local
+.env.*.local
+*.log
+dev-server.pid
+dev-server.jobid
+output
+.DS_Store
