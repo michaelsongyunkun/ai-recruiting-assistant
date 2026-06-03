@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { extractResumeTextFromBuffer } from "../lib/documents/resume-text-extractor.js";
 
 const textResult = await extractResumeTextFromBuffer({
@@ -28,5 +29,13 @@ const fakePdfResult = await extractResumeTextFromBuffer({
 
 assert.equal(fakePdfResult.ok, false);
 assert.notEqual(fakePdfResult.text, "%PDF-1.7\n1 0 obj\n<</Type/Catalog>>\nendobj");
+
+const extractorSource = await readFile("lib/documents/resume-text-extractor.js", "utf8");
+const packageJson = JSON.parse(await readFile("package.json", "utf8"));
+const requirements = await readFile("requirements.txt", "utf8");
+
+assert.match(extractorSource, /PDF_TEXT_EXTRACTOR_DEPENDENCY_MISSING/);
+assert.match(packageJson.scripts.build, /ensure-render-python-deps\.mjs/);
+assert.match(requirements, /pypdf/);
 
 console.log("resume-text-extractor.test.mjs passed");
