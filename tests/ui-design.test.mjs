@@ -23,6 +23,8 @@ assert.match(styles, /--accent:/);
 assert.match(styles, /\.enterpriseTopbar/);
 assert.match(styles, /\.opsMetricGrid/);
 assert.match(styles, /\.workflowFunnel/);
+assert.match(styles, /\.deepseekWorkflowPrototype/);
+assert.match(styles, /\.workflowCanvas/);
 assert.match(styles, /max-width:\s*1440px/);
 assert.equal(styles.includes("Arial"), false);
 

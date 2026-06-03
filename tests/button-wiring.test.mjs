@@ -26,6 +26,8 @@ assert.match(candidateUploader, /modelConnections/);
 assert.match(candidateUploader, /resumeParserConnection/);
 assert.match(candidateUploader, /productResumeScoringConnection/);
 assert.match(candidateUploader, /screeningConnection/);
+assert.match(candidateUploader, /DeepSeekResumeWorkflowPrototype/);
+assert.equal(candidateUploader.includes("workflow.steps.map"), false);
 assert.match(screeningWorkspace, /useRouter/);
 assert.match(screeningWorkspace, /router\.push\("\/interviews"\)/);
 assert.match(screeningWorkspace, /href="\/settings\/model-api"/);

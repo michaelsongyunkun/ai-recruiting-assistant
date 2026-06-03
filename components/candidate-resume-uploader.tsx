@@ -40,6 +40,50 @@ type ModelConnection = {
   workflows: string[];
 };
 
+const deepseekWorkflowLanes = [
+  {
+    title: "输入层",
+    code: "01",
+    nodes: [
+      { title: "候选人简历", body: "PDF / DOCX / TXT 上传", meta: "文件进入解析队列" },
+      { title: "目标岗位", body: "JD 与岗位评分标准", meta: "作为后续评分上下文" }
+    ]
+  },
+  {
+    title: "预处理层",
+    code: "02",
+    nodes: [
+      { title: "文本抽取", body: "抽取可复制文本与基础元数据", meta: "不可读文件直接阻断" },
+      { title: "输入清洗", body: "去除空段与异常字符", meta: "保留原文证据" }
+    ]
+  },
+  {
+    title: "DeepSeek Agent",
+    code: "03",
+    emphasized: true,
+    nodes: [
+      { title: "简历解析大模型节点", body: "System Prompt + Schema JSON", meta: "只基于简历明确信息" },
+      { title: "上下文接入", body: "岗位 JD / 评分标准 / 合规规则", meta: "RAG 上下文可扩展" }
+    ]
+  },
+  {
+    title: "校验层",
+    code: "04",
+    nodes: [
+      { title: "结构校验", body: "字段完整性与 JSON schema 校验", meta: "失败则要求重跑" },
+      { title: "合规护栏", body: "过滤受保护特征与无证据判断", meta: "输出需人工复核" }
+    ]
+  },
+  {
+    title: "输出层",
+    code: "05",
+    nodes: [
+      { title: "结构化简历", body: "经历 / 技能 / 项目 / 教育", meta: "可导出查看" },
+      { title: "评分与入库", body: "产品岗评分 Agent + 候选人档案", meta: "HR 确认后保存" }
+    ]
+  }
+];
+
 type UploadState =
   | { status: "idle" }
   | { status: "parsing" }
@@ -104,6 +148,81 @@ function createResumeParsingReportDownload(
     fileName: state.fileName
   });
   return { url, fileName, createdAt: new Date().toISOString() };
+}
+
+function DeepSeekResumeWorkflowPrototype({
+  workflow,
+  resumeParserConnection,
+  productResumeScoringConnection,
+  screeningConnection
+}: {
+  workflow: ResumeWorkflow | null;
+  resumeParserConnection: boolean;
+  productResumeScoringConnection: boolean;
+  screeningConnection: boolean;
+}) {
+  const connectionStatus = [
+    { label: "简历解析", connected: resumeParserConnection },
+    { label: "产品岗评分", connected: productResumeScoringConnection },
+    { label: "岗位初筛", connected: screeningConnection }
+  ];
+
+  return (
+    <div className="deepseekWorkflowPrototype">
+      <div className="prototypeHeader">
+        <div>
+          <p className="eyebrow">DeepSeek workflow 原型</p>
+          <h3>以 DeepSeek 大模型节点为核心的简历解析编排</h3>
+        </div>
+        <div className="workflowServiceStatus" aria-label="AI workflow 连接状态">
+          {connectionStatus.map((item) => (
+            <span className={`statusPill ${item.connected ? "success" : "blocked"}`} key={item.label}>
+              {item.label}{item.connected ? "可用" : "待连接"}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="workflowCanvas" aria-label="DeepSeek 简历解析 workflow 原型图">
+        {deepseekWorkflowLanes.map((lane, laneIndex) => (
+          <div className={`workflowLane ${lane.emphasized ? "agentLane" : ""}`} key={lane.title}>
+            <div className="workflowLaneHeader">
+              <span>{lane.code}</span>
+              <strong>{lane.title}</strong>
+            </div>
+            <div className="workflowNodeStack">
+              {lane.nodes.map((node) => (
+                <article className="workflowNode" key={node.title}>
+                  <strong>{node.title}</strong>
+                  <p>{node.body}</p>
+                  <span>{node.meta}</span>
+                </article>
+              ))}
+            </div>
+            {laneIndex < deepseekWorkflowLanes.length - 1 ? <span className="workflowArrow" aria-hidden="true">→</span> : null}
+          </div>
+        ))}
+      </div>
+
+      <div className="workflowOutcomeStrip">
+        <article>
+          <span>调用模式</span>
+          <strong>用户自有 DeepSeek API</strong>
+          <p>未提交并验证 API Key 时，解析、评分和初筛不会启动。</p>
+        </article>
+        <article>
+          <span>输出格式</span>
+          <strong>结构化 JSON + 可导出报告</strong>
+          <p>解析结果保存到候选人档案，并可进入产品岗评分。</p>
+        </article>
+        <article>
+          <span>当前解析质量</span>
+          <strong>{workflow ? `${workflow.quality.score} / 100` : "-- / 100"}</strong>
+          <p>{workflow ? workflow.quality.summary : "等待上传简历并调用 DeepSeek 节点。"}</p>
+        </article>
+      </div>
+    </div>
+  );
 }
 
 export function CandidateResumeUploader({ onImported }: { onImported?: () => void } = {}) {
@@ -306,9 +425,9 @@ export function CandidateResumeUploader({ onImported }: { onImported?: () => voi
     <section className="panel">
       <div className="sectionHeader">
         <div>
-          <p className="eyebrow">简历解析 workflow</p>
-          <h2>先调用 DeepSeek 解析简历，再保存候选人</h2>
-          <p>解析 workflow 包含文本提取、DeepSeek 大模型解析、质检与合规检查、人工确认保存。</p>
+          <p className="eyebrow">候选人简历上传</p>
+          <h2>嵌入 DeepSeek 简历解析 workflow</h2>
+          <p>中间编排层由 DeepSeek 大模型节点、结构化输出校验和 HR 人工复核组成。</p>
         </div>
         <span className={`statusPill ${statusMeta.tone}`}>{statusMeta.label}</span>
       </div>
@@ -336,7 +455,7 @@ export function CandidateResumeUploader({ onImported }: { onImported?: () => voi
       </div>
 
       <p className="helperText">
-        当前 workflow 不再使用本地规则解析；请先在模型 API 页面配置并验证 DeepSeek。
+        简历解析由已验证的 DeepSeek API 连接驱动；未配置 Key 时不会启动生成功能。
         <a className="textLink" href="/settings/model-api">前往配置</a>
       </p>
       {!resumeParserConnection || !productResumeScoringConnection || !screeningConnection ? (
@@ -353,42 +472,12 @@ export function CandidateResumeUploader({ onImported }: { onImported?: () => voi
         </p>
       ) : null}
 
-      {workflow ? (
-        <div className="resumeWorkflowGrid">
-          <div className="workflowSteps">
-            {workflow.steps.map((step, index) => (
-              <article className={`workflowStep ${step.status}`} key={step.id}>
-                <div className="workflowStepHeader">
-                  <span>{index + 1}</span>
-                  <strong>{step.title}</strong>
-                </div>
-                <p>{step.detail}</p>
-              </article>
-            ))}
-          </div>
-
-          <div className="resumeQualityPanel">
-            <div className="sectionHeader">
-              <div>
-                <p className="eyebrow">解析质量</p>
-                <h3>{workflow.quality.score} / 100</h3>
-              </div>
-              <span className={`statusPill ${workflow.quality.tone}`}>
-                {workflow.readyToSave ? "可保存" : "需修复"}
-              </span>
-            </div>
-            <div className="scoreBar" aria-hidden="true">
-              <span style={{ width: `${workflow.quality.score}%` }} />
-            </div>
-            <p>{workflow.quality.summary}</p>
-          </div>
-        </div>
-      ) : (
-        <div className="resumeWorkflowEmpty">
-          <strong>等待解析简历</strong>
-          <p>上传后会先生成结构化解析结果，确认质量后才保存候选人。</p>
-        </div>
-      )}
+      <DeepSeekResumeWorkflowPrototype
+        workflow={workflow}
+        resumeParserConnection={resumeParserConnection}
+        productResumeScoringConnection={productResumeScoringConnection}
+        screeningConnection={screeningConnection}
+      />
 
       {profile && workflow ? (
         <div className="parsedResume">
